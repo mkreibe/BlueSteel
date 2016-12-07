@@ -13,7 +13,15 @@ namespace BlueSteel.Host.Data
         /// <summary>
         /// Holds the values.
         /// </summary>
-        private Dictionary<int, string> pairs = new Dictionary<int, string>();
+        private Dictionary<int, string> pairs;
+
+        /// <summary>
+        /// Create the repository.
+        /// </summary>
+        public MemoryValueRepository()
+        {
+            this.pairs = new Dictionary<int, string>();
+        }
 
         /// <summary>
         /// Get or set the value.

@@ -19,7 +19,7 @@
     "Host": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "http://localhost:5000/values",
+      "launchUrl": "http://localhost:5001/health",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

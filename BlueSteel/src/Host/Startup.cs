@@ -5,9 +5,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using BlueSteel.Extensions;
 using BlueSteel.Host.Data;
+using BlueSteel.Actuators.Health;
+using BlueSteel.Services;
+using BlueSteel.Actuators.Env;
+using Microsoft.AspNetCore.Http;
 
 namespace BlueSteel.Host
 {
+    /// <summary>
+    /// Defines the start of the application.
+    /// </summary>
     public class Startup
     {
         public Startup(IHostingEnvironment env)
@@ -16,12 +23,6 @@ namespace BlueSteel.Host
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true);
-
-            if (env.IsEnvironment("Development"))
-            {
-                // This will push telemetry data through Application Insights pipeline faster, allowing you to view results immediately.
-                builder.AddApplicationInsightsSettings(developerMode: true);
-            }
 
             builder.AddEnvironmentVariables();
             Configuration = builder.Build();
@@ -32,18 +33,15 @@ namespace BlueSteel.Host
         // This method gets called by the runtime. Use this method to add services to the container
         public void ConfigureServices(IServiceCollection services)
         {
-            // Add framework services.
-            services.AddApplicationInsightsTelemetry(Configuration);
-
             services.AddMvc();
-
             services.AddSingleton<IValueRepository, MemoryValueRepository>((provider) =>
             {
-                MemoryValueRepository repo = new MemoryValueRepository();
-
-                repo.Add(1, "value1");
-                repo.Add(2, "value2");
-                repo.Add(42, "Answer to the Ultimate Question of Life, the Universe, and Everything");
+                MemoryValueRepository repo = new MemoryValueRepository()
+                {
+                    [1] = "value1",
+                    [2] = "value2",
+                    [42] = "Answer to the Ultimate Question of Life, the Universe, and Everything"
+                };
 
                 return repo;
             });
@@ -55,13 +53,10 @@ namespace BlueSteel.Host
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
-            app.UseApplicationInsightsRequestTelemetry();
-
-            app.UseApplicationInsightsExceptionTelemetry();
-
             app.UseMvc();
 
-            app.UseActuators(Configuration.GetSection("Actuators"));
+            // Update the health status.
+            app.GetActuatorService<IHealthService>((service) => service.SetStatus(HealthStatusCode.Up, "Started."));
         }
     }
 }

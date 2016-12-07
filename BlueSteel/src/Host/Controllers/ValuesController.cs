@@ -52,17 +52,32 @@ namespace BlueSteel.Host.Controllers
         /// <param name="id">The id to process.</param>
         /// <param name="processor">The post processing step.</param>
         /// <param name="code">The code to provide on failures.</param>
-        private void Process(int id, Action<int, string> processor, HttpStatusCode code = HttpStatusCode.NotFound)
+        private async Task<IActionResult> Process<T>(int? id, Func<int, string, T> processor)
         {
-            if (this.Repository.Contains(id))
-            {
-                processor(id, this.Repository[id]);
-            }
-            else
-            {
-                Logger.LogInformation($"No such id: {id}");
-                StatusCode((int) code);
-            }
+            return await Task.Run(() => {
+                IActionResult task = null;
+                if (!id.HasValue || this.Repository.Contains(id.Value))
+                {
+                    string val = null;
+                    int index = -1;
+                    if (id.HasValue)
+                    {
+                        index = id.Value;
+                        val = this.Repository[index];
+                    }
+                    task = this.Ok(processor(index, val));
+                }
+
+
+                if (task == null)
+                {
+                    string message = $"No such id: {id}";
+                    Logger.LogWarning(message);
+                    task = this.NotFound(message);
+                }
+
+                return task;
+            });
         }
 
         #endregion
@@ -83,11 +98,9 @@ namespace BlueSteel.Host.Controllers
         /// <param name="id">The id to get.</param>
         /// <returns>Returns the value or null if it wasn't found.</returns>
         [HttpGet("{id}")]
-        public string Get(int id)
+        public async Task<IActionResult> Get(int? id)
         {
-            string output = null;
-            Process(id, (index, val) => { output = val; });
-            return output;
+            return await Process(id, (index, val) => val);
         }
 
         /// <summary>
@@ -96,9 +109,9 @@ namespace BlueSteel.Host.Controllers
         /// <param name="value">The value to add.</param>
         /// <returns>Returns the id of the value created.</returns>
         [HttpPost]
-        public int Post([FromBody]string value)
+        public async Task<IActionResult> Post([FromBody]string value)
         {
-            return this.Repository.Add(value);
+            return await Process(null, (index, val) => this.Repository.Add(value));
         }
 
         /// <summary>
@@ -107,9 +120,12 @@ namespace BlueSteel.Host.Controllers
         /// <param name="id">The id to update.</param>
         /// <param name="value">The value to save.</param>
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody]string value)
+        public async Task<IActionResult> Put(int id, [FromBody]string value)
         {
-            Process(id, (index, val) => { this.Repository[index] = value; });
+            return await Process(id, (index, val) => {
+                this.Repository[index] = value;
+                return value;
+            });
         }
 
         /// <summary>
@@ -117,9 +133,12 @@ namespace BlueSteel.Host.Controllers
         /// </summary>
         /// <param name="id">The index to delete.</param>
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            Process(id, (index, val) => { this.Repository.Remove(index); });
+            return await Process(id, (index, val) => {
+                this.Repository.Remove(index);
+                return index;
+            });
         }
     }
 }
