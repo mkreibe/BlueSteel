@@ -1,14 +1,9 @@
-﻿using BlueSteel.Actuators;
-using BlueSteel.Services;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace BlueSteel.Middleware
+namespace BlueSteel.Actuators.Middleware
 {
     /// <summary>
     /// Defines the middle ware for the actuarots.
@@ -22,9 +17,9 @@ namespace BlueSteel.Middleware
         private ILogger<ActuatorMiddleware> Logger { get; set; }
 
         /// <summary>
-        /// Holds the service.
+        /// Holds the route.
         /// </summary>
-        private IActuatorRepository Service { get; set; }
+        private IActuatorRouter Router { get; set; }
 
         /// <summary>
         /// Holds the next thing to do.
@@ -36,10 +31,10 @@ namespace BlueSteel.Middleware
         /// </summary>
         /// <param name="next"></param>
         /// <param name="loggerFactory"></param>
-        public ActuatorMiddleware(RequestDelegate next, IActuatorRepository service, ILoggerFactory loggerFactory)
+        public ActuatorMiddleware(RequestDelegate next, IActuatorRouter router, ILoggerFactory loggerFactory)
         {
             this.Next = next;
-            this.Service = service;
+            this.Router = router;
             this.Logger = loggerFactory.CreateLogger<ActuatorMiddleware>();
         }
 
@@ -52,10 +47,11 @@ namespace BlueSteel.Middleware
         {
             int port = context.Connection.LocalPort;
             string route = context.Request.Path.Value;
-            if (this.Service != null && this.Service.ContainsRoute(route))
+            if (this.Router != null && this.Router.ContainsRoute(route))
             {
                 this.Logger.LogInformation($"Run Actuator for route: {route}");
-                IActuator actuator = this.Service.GetActuatorByRoute(route);
+                IRoute actuator = this.Router.GetActuatorByRoute(route);
+                context.Response.ContentType = "application/json";
                 await context.Response.WriteAsync(JsonConvert.SerializeObject(await actuator.Invoke()));
             }
             else

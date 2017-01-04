@@ -1,19 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
-
-namespace BlueSteel.Services
+namespace BlueSteel.Actuators.Middleware
 {
     /// <summary>
     /// Defines the actuator service.
     /// </summary>
-    public interface IActuatorRepository
+    public interface IActuatorRouter
     {
-        /// <summary>
-        /// Add the actuator to the service.
-        /// </summary>
-        /// <typeparam name="T">The actuators type.</typeparam>
-        /// <param name="actuator">The actuator to add.</param>
-        /// <param name="config">The configuration for the actuator.</param>
-        void AddActuator<T>(T actuator, IConfigurationSection config) where T : IActuator;
 
         /// <summary>
         /// Check if the actuator exists.
@@ -27,6 +18,7 @@ namespace BlueSteel.Services
         /// </summary>
         /// <param name="route">The route to the actuator to return.</param>
         /// <returns>Returns the actuator.</returns>
-        IActuator GetActuatorByRoute(string route);
+        IRoute GetActuatorByRoute(string route);
+
     }
 }

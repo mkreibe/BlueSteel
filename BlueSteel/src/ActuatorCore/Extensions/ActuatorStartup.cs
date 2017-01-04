@@ -5,12 +5,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using BlueSteel.Actuators.Health;
 using BlueSteel.Actuators.Env;
-using BlueSteel.Services;
-using BlueSteel.Extensions;
+using BlueSteel.Actuators.Middleware;
 
-namespace BlueSteel.Host
+namespace BlueSteel.Actuators.Extensions
 {
-    public class ActuatorStartup
+    internal class ActuatorStartup
     {
         public ActuatorStartup(IHostingEnvironment env)
         {
@@ -27,15 +26,22 @@ namespace BlueSteel.Host
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // Add the actuators with the specified helper services. In this case the health service
-            services.AddActuators(Configuration.GetSection("Management"), typeof(HealthService));
+            services.AddSingleton<IActuatorRepository, ActuatorRepository>((provider) => {
+                return new ActuatorRepository();
+            });
+
+            services.AddSingleton<IActuatorRouter, ActuatorRepository>((provider) => {
+                return provider.GetService<IActuatorRepository>() as ActuatorRepository;
+            });
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddConsole(Configuration.GetSection("Logging"));
+
             // Add the actuator.
-            app.UseActuator<HealthActuator>(Configuration.GetSection("Management:Actuators:Health"));
-            app.UseActuator<EnvActuator>(Configuration.GetSection("Management:Actuators:Health"));
+            app.UseActuator<HealthActuator>(Configuration.GetSection("Management:Actuators:Health"), (config) => new HealthActuator());
+            app.UseActuator<EnvActuator>(Configuration.GetSection("Management:Actuators:Env"));
         }
     }
 }

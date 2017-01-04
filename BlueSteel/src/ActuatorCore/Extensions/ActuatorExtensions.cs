@@ -1,15 +1,14 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
-using BlueSteel.Middleware;
-using BlueSteel.Services;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using BlueSteel.Actuators.Middleware;
 
-namespace BlueSteel.Extensions
+namespace BlueSteel.Actuators.Extensions
 {
     /// <summary>
     /// Defines the service configuration extensions.
@@ -21,58 +20,38 @@ namespace BlueSteel.Extensions
         /// </summary>
         /// <param name="builder">Defines the application builder.</param>
         /// <returns></returns>
-        public static IWebHostBuilder UseManagementHost(this IWebHostBuilder builder, IWebHost managementHost)
+        public static IWebHostBuilder UseManagementHost(this IWebHostBuilder builder, string managementUrl)
         {
             if (builder == null)
             {
                 throw new ArgumentNullException(nameof(builder));
             }
 
-            if(managementHost != null)
+            var management = new WebHostBuilder()
+                .UseUrls(managementUrl)
+                .UseKestrel()
+                .UseIISIntegration()
+                .UseStartup<ActuatorStartup>()
+                .Build();
+
+            if(management != null)
             {
                 // TODO: We need to switch to a management port for these artifacts.
                 string data = builder.GetSetting("");
-                IServiceProvider provider = managementHost.Services;
-                provider as ServiceProviderServiceExtensions
+                IServiceProvider provider = management.Services;
+                IActuatorRepository repo = provider.GetService(typeof(IActuatorRepository)) as IActuatorRepository;
+                IActuatorRouter router = provider.GetService(typeof(IActuatorRouter)) as IActuatorRouter;
+
+                builder.ConfigureServices((services) => {
+                    services.AddSingleton<IActuatorRepository>((p) => repo);
+                    services.AddSingleton<IActuatorRouter>((p) => router);
+                });
 
                 // Start the management port.
-                managementHost.Start();
+                management.Start();
             }
 
             return builder;
-        }
-
-        /// <summary>
-        /// Build the management.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="builder"></param>
-        /// <returns></returns>
-        public static IWebHost BuildManagement<T>(this IWebHostBuilder builder) where T : class
-        {
-            return builder
-                .UseStartup<T>()
-                .Build();
-        }
-
-        /// <summary>
-        /// Add the actuator to the service collection.
-        /// </summary>
-        /// <param name="collection">The collection to manipulate.</param>
-        /// <returns></returns>
-        public static IServiceCollection AddActuators(this IServiceCollection collection, IConfigurationSection section, params Type[] supportingServices)
-        {
-            if (collection == null)
-            {
-                throw new ArgumentNullException(nameof(collection));
-            }
-
-            foreach(Type implementation in supportingServices) {
-                Type service = implementation.GetTypeInfo().ImplementedInterfaces.First();
-                collection.AddSingleton(service, implementation);
-            }
-
-            return collection.AddSingleton<IActuatorRepository, ActuatorRepository>();
         }
 
         /// <summary>
@@ -81,12 +60,11 @@ namespace BlueSteel.Extensions
         /// <typeparam name="T">The service to return.</typeparam>
         /// <param name="builder">The builder to use.</param>
         /// <returns>Returns the service</returns>
-        public static void GetActuatorService<T>(this IApplicationBuilder builder, Action<T> operation) where T : IActuatorService
+        public static void UpdateActuator<T>(this IApplicationBuilder builder, Action<T> operation) where T : class, IActuator
         {
-            T service = builder.ApplicationServices.GetService<T>();
-            if(service != null)
-            {
-                operation(service);
+            IActuatorRepository repo = builder.ApplicationServices.GetRequiredService<IActuatorRepository>();
+            if(repo != null) {
+                repo.CallActuator<T>(operation);
             }
         }
 
@@ -97,7 +75,7 @@ namespace BlueSteel.Extensions
         /// <param name="config">The configuration for the provided actuator.</param>
         /// <param name="factory">The factory used to build the service.</param>
         /// <returns>Returns the builder.</returns>
-        public static IApplicationBuilder UseActuator<T>(this IApplicationBuilder app, IConfigurationSection config, Func<IConfigurationSection, T> factory = null) where T : IActuator
+        public static IApplicationBuilder UseActuator<T>(this IApplicationBuilder app, IConfigurationSection config, Func<IConfigurationSection, T> factory = null) where T : IRoute
         {
             if (app == null)
             {
@@ -166,8 +144,9 @@ namespace BlueSteel.Extensions
                 };
             }
 
-            IActuatorRepository service = app.ApplicationServices.GetService<IActuatorRepository>();
-            service.AddActuator<T>(factory(config), config);
+            app.ApplicationServices
+                .GetService<IActuatorRepository>()
+                .AddRoute<T>(factory(config), config);
 
             return app.UseMiddleware<ActuatorMiddleware>();
         }

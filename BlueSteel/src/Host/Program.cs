@@ -1,8 +1,8 @@
 ﻿using System.IO;
-using BlueSteel.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
+using BlueSteel.Actuators.Extensions;
 
 namespace BlueSteel.Host
 {
@@ -22,18 +22,12 @@ namespace BlueSteel.Host
                 .AddJsonFile("hosting.json", optional: true)
                 .Build();
 
-            var management = new WebHostBuilder()
-                .UseUrls("http://localhost:5001/")
-                .UseKestrel()
-                .UseIISIntegration()
-                .BuildManagement<ActuatorStartup>();
-
             var host = new WebHostBuilder()
                 .UseConfiguration(config)
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseKestrel()
                 .UseIISIntegration()
-                .UseManagementHost(management)
+                .UseManagementHost("http://localhost:5001/")
                 .UseStartup<Startup>()
                 .Build();
 

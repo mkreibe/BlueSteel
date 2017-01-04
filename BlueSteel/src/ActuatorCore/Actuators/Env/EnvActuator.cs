@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BlueSteel.Actuators.Env
 {
@@ -11,7 +9,7 @@ namespace BlueSteel.Actuators.Env
     /// </summary>
     public class EnvActuator : BaseActuator<Dictionary<string, string>>
     {
-        public override Dictionary<string, string> Invoke()
+        internal override Dictionary<string, string> InvokeRoute()
         {
             Dictionary<string, string> envs = new Dictionary<string, string>();
 

@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BlueSteel.Extensions;
 using BlueSteel.Host.Data;
-using BlueSteel.Actuators.Health;
-using BlueSteel.Services;
+using BlueSteel.Actuators;
+using BlueSteel.Actuators.Extensions;
 using BlueSteel.Actuators.Env;
-using Microsoft.AspNetCore.Http;
+using BlueSteel.Actuators.Health;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace BlueSteel.Host
 {
@@ -56,7 +57,23 @@ namespace BlueSteel.Host
             app.UseMvc();
 
             // Update the health status.
-            app.GetActuatorService<IHealthService>((service) => service.SetStatus(HealthStatusCode.Up, "Started."));
+            app.UpdateActuator<HealthActuator>((actuator) => {
+                actuator.AddService(new SimpleService
+                {
+                    StatusCode = HealthStatusCode.Up,
+                    Name = "Simple"
+                });
+
+                actuator.AddService(new ExtendedService
+                {
+                    StatusCode = HealthStatusCode.Up,
+                    Name = "Extended",
+                    ExtendedProperties = new Dictionary<string, JToken>()
+                    {
+                        ["extended"] = JValue.CreateString("value")
+                    }
+                });
+            });
         }
     }
 }

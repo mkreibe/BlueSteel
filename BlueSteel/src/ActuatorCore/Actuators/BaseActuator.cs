@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace BlueSteel.Actuators
@@ -9,7 +7,7 @@ namespace BlueSteel.Actuators
     /// Defines the actuator.
     /// </summary>
     /// <typeparam name="T">The actuator return type.</typeparam>
-    public abstract class BaseActuator<T> : IActuator where T : new()
+    public abstract class BaseActuator<T> : IActuator, IRoute where T : new()
     {
         /// <summary>
         /// Holds the route.
@@ -57,18 +55,18 @@ namespace BlueSteel.Actuators
         }
 
         /// <summary>
-        /// Invoke the actuator.
+        /// Invoke the actuator route.
         /// </summary>
         /// <returns>Returns the task.</returns>
-        public abstract T Invoke();
+        internal abstract T InvokeRoute();
 
         /// <summary>
         /// Invoke the actuator.
         /// </summary>
         /// <returns>Returns the task.</returns>
-        async Task<object> IActuator.Invoke()
+        public async Task<object> Invoke()
         {
-            return await Task.Run<T>(() => this.Invoke());
+            return await Task.Run<T>(() => this.InvokeRoute());
         }
     }
 }
