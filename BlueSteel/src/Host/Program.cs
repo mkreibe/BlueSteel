@@ -27,7 +27,7 @@ namespace BlueSteel.Host
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .UseKestrel()
                 .UseIISIntegration()
-                .UseManagementHost("http://localhost:5001/")
+                .UseManagementHost()
                 .UseStartup<Startup>()
                 .Build();
 

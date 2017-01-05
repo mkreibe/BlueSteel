@@ -252,4 +252,4 @@ paket-files/
 *.sln.iml
 
 # MacOS Filesystem
-**/.DS_Stor
+**/.DS_Store

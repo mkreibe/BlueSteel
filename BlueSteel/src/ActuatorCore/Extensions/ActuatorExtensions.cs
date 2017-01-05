@@ -16,19 +16,47 @@ namespace BlueSteel.Actuators.Extensions
     public static class ActuatorExtensions
     {
         /// <summary>
+        /// Use the management default port.
+        /// </summary>
+        public const int DEFAULT_MANAGEMENT_PORT = 5001;
+
+        /// <summary>
         /// Use the management subsystem.
         /// </summary>
         /// <param name="builder">Defines the application builder.</param>
         /// <returns></returns>
-        public static IWebHostBuilder UseManagementHost(this IWebHostBuilder builder, string managementUrl)
+        public static IWebHostBuilder UseManagementHost(this IWebHostBuilder builder, string url = null)
         {
             if (builder == null)
             {
                 throw new ArgumentNullException(nameof(builder));
             }
 
+            if(string.IsNullOrWhiteSpace(url))
+            {
+                int nextPort = DEFAULT_MANAGEMENT_PORT;
+
+                string env = Environment.GetEnvironmentVariable("MANAGEMENT_PORT");
+                if(string.IsNullOrWhiteSpace(env))
+                {
+                    // Check for the 'PORT' variable and increment that by one as the default
+                    // management port.
+                    env = Environment.GetEnvironmentVariable("PORT");
+                    if(!string.IsNullOrWhiteSpace(env) && int.TryParse(env, out nextPort))
+                    {
+                        ++nextPort;
+                    }
+                }
+                else
+                {
+                    int.TryParse(env, out nextPort);
+                }
+
+                url = $"http://*:{nextPort}/";
+            }
+
             var management = new WebHostBuilder()
-                .UseUrls(managementUrl)
+                .UseUrls(url)
                 .UseKestrel()
                 .UseIISIntegration()
                 .UseStartup<ActuatorStartup>()
